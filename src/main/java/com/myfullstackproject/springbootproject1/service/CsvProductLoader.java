@@ -7,7 +7,6 @@ import com.opencsv.exceptions.CsvException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -17,10 +16,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
-@Component
 public class CsvProductLoader implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(CsvProductLoader.class);
+    private static final String CSV_FILE_PATH = "/Cleaned1..csv";
+    
+    // CSV column indices
+    private static final int ASIN_COLUMN = 0;
+    private static final int CATEGORY_COLUMN = 1;
+    private static final int PRODUCT_LINK_COLUMN = 2;
+    private static final int RANK_COLUMN = 4;
+    private static final int RATING_COLUMN = 5;
+    private static final int REVIEWS_COUNT_COLUMN = 6;
+    private static final int PRICE_COLUMN = 7;
+    private static final int TITLE_COLUMN = 15;
+
     private final ProductRepository productRepository;
 
     public CsvProductLoader(ProductRepository productRepository) {
@@ -36,39 +46,43 @@ public class CsvProductLoader implements CommandLineRunner {
 
         log.info("Loading products from CSV file...");
 
-        try (InputStream is = getClass().getResourceAsStream("/Cleaned1..csv");
-             InputStreamReader reader = new InputStreamReader(is);
-             CSVReader csvReader = new CSVReader(reader)) {
-
-            List<String[]> allRows = csvReader.readAll();
-            List<Product> products = new ArrayList<>();
-
-            // Skip header row (index 0)
-            for (int i = 1; i < allRows.size(); i++) {
-                String[] row = allRows.get(i);
-                
-                try {
-                    // CSV columns: ASIN, Category, Product Link, No of Sellers, Rank, Rating, Reviews Count, Price, 
-                    // Books, Camera & Photo, Clothing/Shoes/Jewelry, Electronics, Gift Cards, Toys & Games, Video Games, Product Title
-                    Product product = Product.builder()
-                            .asin(row[0])                                           // ASIN
-                            .category(row[1])                                       // Category
-                            .productLink(row[2])                                    // Product Link
-                            .rank(parseInteger(row[4]))                             // Rank
-                            .rating(parseDouble(row[5]))                            // Rating
-                            .ratingCount(parseLong(row[6]))                         // Reviews Count
-                            .price(parseDouble(row[7]))                             // Price
-                            .title(row.length > 15 ? row[15] : "")                  // Product Title
-                            .build();
-
-                    products.add(product);
-                } catch (Exception e) {
-                    log.warn("Error parsing row {}: {}", i, e.getMessage());
-                }
+        try (InputStream is = getClass().getResourceAsStream(CSV_FILE_PATH)) {
+            if (is == null) {
+                log.error("CSV file not found at: {}", CSV_FILE_PATH);
+                return;
             }
 
-            productRepository.saveAll(products);
-            log.info("Successfully loaded {} products from CSV into database.", products.size());
+            try (InputStreamReader reader = new InputStreamReader(is);
+                 CSVReader csvReader = new CSVReader(reader)) {
+
+                List<String[]> allRows = csvReader.readAll();
+                List<Product> products = new ArrayList<>();
+
+                // Skip header row (index 0)
+                for (int i = 1; i < allRows.size(); i++) {
+                    String[] row = allRows.get(i);
+                    
+                    try {
+                        Product product = Product.builder()
+                                .asin(row[ASIN_COLUMN])
+                                .category(row[CATEGORY_COLUMN])
+                                .productLink(row[PRODUCT_LINK_COLUMN])
+                                .rank(parseInteger(row[RANK_COLUMN]))
+                                .rating(parseDouble(row[RATING_COLUMN]))
+                                .ratingCount(parseLong(row[REVIEWS_COUNT_COLUMN]))
+                                .price(parseDouble(row[PRICE_COLUMN]))
+                                .title(row.length > TITLE_COLUMN ? row[TITLE_COLUMN] : "")
+                                .build();
+
+                        products.add(product);
+                    } catch (Exception e) {
+                        log.warn("Error parsing row {}: {}", i, e.getMessage());
+                    }
+                }
+
+                productRepository.saveAll(products);
+                log.info("Successfully loaded {} products from CSV into database.", products.size());
+            }
 
         } catch (IOException | CsvException e) {
             log.error("Error loading CSV file: {}", e.getMessage(), e);
