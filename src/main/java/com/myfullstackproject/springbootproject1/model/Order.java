@@ -1,4 +1,4 @@
-package model;
+package com.myfullstackproject.springbootproject1.model;
 
 import jakarta.persistence.*;
 import lombok.*;

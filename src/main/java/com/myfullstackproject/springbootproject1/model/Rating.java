@@ -1,4 +1,4 @@
-package model;
+package com.myfullstackproject.springbootproject1.model;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -22,7 +22,7 @@ public class Rating {
 
     @ManyToOne
     @JoinColumn(name = "produit_id")
-    private model.Product product;
+    private com.myfullstackproject.springbootproject1.model.Product product;
 
     @Column(name = "nb_etoiles")
     private Integer stars;   // 1 à 5
