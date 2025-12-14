@@ -58,4 +58,28 @@ public class CartController {
     public List<CartItem> getCart() {
         return cartItemRepository.findByBuyerId(DEMO_BUYER);
     }
+
+    // Modifier la quantité d'un article du panier
+    @PutMapping("/{id}")
+    public CartItem updateCartItemQuantity(@PathVariable Long id,
+                                          @RequestParam int quantity) {
+        CartItem item = cartItemRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Article du panier introuvable"));
+        
+        if (quantity <= 0) {
+            throw new IllegalArgumentException("La quantité doit être supérieure à 0");
+        }
+        
+        item.setQuantity(quantity);
+        return cartItemRepository.save(item);
+    }
+
+    // Supprimer un article du panier
+    @DeleteMapping("/{id}")
+    public void deleteCartItem(@PathVariable Long id) {
+        CartItem item = cartItemRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Article du panier introuvable"));
+        
+        cartItemRepository.delete(item);
+    }
 }
