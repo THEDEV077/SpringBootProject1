@@ -8,7 +8,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/produits")
-@CrossOrigin(origins = "http://localhost:5174") // port Vite par défaut
+@CrossOrigin(origins = "http://localhost:5173") // port Vite par défaut
 public class ProductController {
 
     private final ProductRepository productRepository;

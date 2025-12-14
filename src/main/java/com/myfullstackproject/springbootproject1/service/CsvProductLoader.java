@@ -19,7 +19,7 @@ import java.util.List;
 public class CsvProductLoader implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(CsvProductLoader.class);
-    private static final String CSV_FILE_PATH = "/Cleaned1..csv";
+    private static final String CSV_FILE_PATH = "/Cleaned1.csv";
     
     // CSV column indices
     private static final int ASIN_COLUMN = 0;
