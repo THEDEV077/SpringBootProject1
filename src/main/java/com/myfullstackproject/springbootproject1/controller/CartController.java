@@ -66,6 +66,11 @@ public class CartController {
         CartItem item = cartItemRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Article du panier introuvable"));
         
+        // Vérifier que l'article appartient à l'acheteur actuel
+        if (!DEMO_BUYER.equals(item.getBuyerId())) {
+            throw new RuntimeException("Accès non autorisé à cet article");
+        }
+        
         if (quantity <= 0) {
             throw new IllegalArgumentException("La quantité doit être supérieure à 0");
         }
@@ -79,6 +84,11 @@ public class CartController {
     public void deleteCartItem(@PathVariable Long id) {
         CartItem item = cartItemRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Article du panier introuvable"));
+        
+        // Vérifier que l'article appartient à l'acheteur actuel
+        if (!DEMO_BUYER.equals(item.getBuyerId())) {
+            throw new RuntimeException("Accès non autorisé à cet article");
+        }
         
         cartItemRepository.delete(item);
     }

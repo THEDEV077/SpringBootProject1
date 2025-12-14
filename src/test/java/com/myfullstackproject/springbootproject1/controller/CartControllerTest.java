@@ -128,4 +128,34 @@ class CartControllerTest {
         assertEquals(1, cart.size());
         assertEquals(2, cart.get(0).getQuantity());
     }
+
+    @Test
+    void testUpdateCartItemQuantityThrowsExceptionForUnauthorizedAccess() {
+        // Add item to cart
+        CartItem item = cartController.addToCart(testProduct.getId(), 1);
+        
+        // Modify the buyer ID to simulate unauthorized access
+        item.setBuyerId("another-buyer");
+        cartItemRepository.save(item);
+
+        // Try to update the item - should throw exception
+        assertThrows(RuntimeException.class, () -> {
+            cartController.updateCartItemQuantity(item.getId(), 5);
+        });
+    }
+
+    @Test
+    void testDeleteCartItemThrowsExceptionForUnauthorizedAccess() {
+        // Add item to cart
+        CartItem item = cartController.addToCart(testProduct.getId(), 1);
+        
+        // Modify the buyer ID to simulate unauthorized access
+        item.setBuyerId("another-buyer");
+        cartItemRepository.save(item);
+
+        // Try to delete the item - should throw exception
+        assertThrows(RuntimeException.class, () -> {
+            cartController.deleteCartItem(item.getId());
+        });
+    }
 }
