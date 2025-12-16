@@ -20,8 +20,9 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "acheteur_id")
-    private String buyerId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "utilisateur_id")
+    private Utilisateur utilisateur;
 
     @Column(name = "date_creation")
     private LocalDateTime createdAt;

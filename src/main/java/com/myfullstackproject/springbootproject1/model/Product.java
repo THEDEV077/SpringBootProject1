@@ -21,9 +21,14 @@ public class Product {
 
     @Column(name = "titre")
     private String title;
+//
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "utilisateur_id")
+    private Utilisateur utilisateur;
 
-    @Column(name = "categorie")
-    private String category;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "categorie_id")
+    private Categorie categorie;
 
     @Column(name = "prix")
     private Double price;
@@ -31,22 +36,18 @@ public class Product {
     @Column(name = "note_moyenne")
     private Double rating;
 
-    @Column(name = "nombre_notes")
-    private Long ratingCount;  // Changé en Long pour Reviews Count (gros chiffres)
+    @Column(name = "nombre_avis")
+    private Long ratingCount;
 
     @Column(name = "rang_amazon")
-    private Integer rank;  // Changé en Integer pour le champ Rank du CSV
+    private Integer rank;
 
-    @Column(name = "product_link")
-    private String productLink;  // Nouveau pour Product Link du CSV
-
-    // Les autres champs restent pour compatibilité/évolutions futures
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
     @Column(name = "image_url")
     private String imageUrl;
 
-    @Column(name = "nombre_avis")
-    private Integer reviewsCount;
+    @Column(name = "Nombre_vendur")
+    private String no_sellers;
 }
