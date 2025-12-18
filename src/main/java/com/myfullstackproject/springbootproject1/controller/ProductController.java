@@ -1,5 +1,6 @@
 package com.myfullstackproject.springbootproject1.controller;
 
+import com.myfullstackproject.springbootproject1.dto.ReviewRequest;
 import com.myfullstackproject.springbootproject1.model.Product;
 import com.myfullstackproject.springbootproject1.model.Rating;
 import com.myfullstackproject.springbootproject1.model.Utilisateur;
@@ -53,17 +54,32 @@ public class ProductController {
 
     // 4) Add new review
     @PostMapping("/{productId}/reviews")
-    public Rating addReview(@PathVariable Long productId, @RequestBody Rating review) {
+    public Rating addReview(@PathVariable Long productId, @RequestBody ReviewRequest reviewRequest) {
+        // Validate input
+        if (reviewRequest.getStars() == null || reviewRequest.getStars() < 1 || reviewRequest.getStars() > 5) {
+            throw new RuntimeException("Les étoiles doivent être entre 1 et 5");
+        }
+        if (reviewRequest.getComment() == null || reviewRequest.getComment().trim().isEmpty()) {
+            throw new RuntimeException("Le commentaire ne peut pas être vide");
+        }
+        if (reviewRequest.getComment().length() > 500) {
+            throw new RuntimeException("Le commentaire ne peut pas dépasser 500 caractères");
+        }
+
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Produit introuvable"));
 
         Utilisateur user = utilisateurRepository.findById(DEMO_USER_ID)
                 .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
 
-        // Set the product and user for the review
-        review.setProduct(product);
-        review.setUtilisateur(user);
-        review.setCreatedAt(LocalDateTime.now());
+        // Create rating from request
+        Rating review = Rating.builder()
+                .product(product)
+                .utilisateur(user)
+                .stars(reviewRequest.getStars())
+                .comment(reviewRequest.getComment())
+                .createdAt(LocalDateTime.now())
+                .build();
 
         return ratingRepository.save(review);
     }
