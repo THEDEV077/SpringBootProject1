@@ -1,5 +1,6 @@
 package com.myfullstackproject.springbootproject1.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -17,10 +18,12 @@ public class Rating {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "utilisateur_id")
     private Utilisateur utilisateur;
 
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "produit_id")
     private com.myfullstackproject.springbootproject1.model.Product product;
