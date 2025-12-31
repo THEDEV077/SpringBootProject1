@@ -168,13 +168,7 @@ public class VendorController {
      */
     @GetMapping("/produits")
     public ResponseEntity<List<Product>> getVendorProducts() {
-        Utilisateur vendor = utilisateurRepository.findById(DEMO_VENDOR_ID)
-                .orElseThrow(() -> new RuntimeException("Vendeur introuvable"));
-
-        List<Product> products = productRepository.findAll().stream()
-                .filter(p -> p.getUtilisateur() != null && p.getUtilisateur().getId().equals(DEMO_VENDOR_ID))
-                .toList();
-
+        List<Product> products = productRepository.findByUtilisateur_Id(DEMO_VENDOR_ID);
         return ResponseEntity.ok(products);
     }
 
