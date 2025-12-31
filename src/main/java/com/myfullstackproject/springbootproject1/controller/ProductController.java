@@ -23,7 +23,7 @@ public class ProductController {
         return productRepository.findAll();
     }
 
-    // 2) Détail d’un produit par id
+    // 2) Détail d'un produit par id
     @GetMapping("/{id}")
     public Product getProductById(@PathVariable Long id) {
         return productRepository.findById(id)

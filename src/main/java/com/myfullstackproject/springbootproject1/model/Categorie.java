@@ -1,5 +1,6 @@
 package com.myfullstackproject.springbootproject1.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.List;
@@ -22,6 +23,7 @@ public class Categorie {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "categorie")
     private List<Product> produits;
 }
