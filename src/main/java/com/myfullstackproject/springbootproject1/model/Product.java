@@ -50,4 +50,7 @@ public class Product {
 
     @Column(name = "Nombre_vendur")
     private String no_sellers;
+
+    @Column(name = "quantite_disponible")
+    private Integer quantityAvailable;
 }
