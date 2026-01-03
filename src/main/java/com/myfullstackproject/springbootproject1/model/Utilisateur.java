@@ -36,4 +36,11 @@ public class Utilisateur {
     @Builder.Default
     @Column(name = "date_creation")
     private LocalDateTime dateCreation = LocalDateTime.now();
+
+    @Column(name = "date_modification")
+    private LocalDateTime dateModification;
+
+    @Column(name = "actif")
+    @Builder.Default
+    private Boolean actif = true;
 }

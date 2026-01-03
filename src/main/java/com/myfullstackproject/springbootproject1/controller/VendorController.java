@@ -2,8 +2,14 @@ package com.myfullstackproject.springbootproject1.controller;
 
 import com.myfullstackproject.springbootproject1.dto.ProductRequest;
 import com.myfullstackproject.springbootproject1.dto.ProductStatsResponse;
+import com.myfullstackproject.springbootproject1.exception.ResourceNotFoundException;
+import com.myfullstackproject.springbootproject1.exception.UnauthorizedException;
+import com.myfullstackproject.springbootproject1.exception.ValidationException;
 import com.myfullstackproject.springbootproject1.model.*;
 import com.myfullstackproject.springbootproject1.repository.*;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +21,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/vendeur")
 @CrossOrigin(origins = "http://localhost:5173")
+@Tag(name = "Vendor", description = "Vendor/Seller APIs for managing products and viewing statistics")
 public class VendorController {
 
     private final ProductRepository productRepository;
@@ -23,6 +30,8 @@ public class VendorController {
     private final UtilisateurRepository utilisateurRepository;
     private final RatingRepository ratingRepository;
 
+    // TODO: Remove hardcoded demo vendor ID and implement proper authentication
+    // This is temporary for testing without authentication
     private static final Long DEMO_VENDOR_ID = 1L; // ID du vendeur démo
 
     public VendorController(ProductRepository productRepository,
@@ -39,32 +48,18 @@ public class VendorController {
 
     // ========== GESTION DES PRODUITS ==========
 
-    /**
-     * Ajouter un nouveau produit
-     * POST /api/vendeur/produits
-     */
+    @Operation(summary = "Add a new product", description = "Create a new product as a vendor")
     @PostMapping("/produits")
-    public ResponseEntity<Product> addProduct(@RequestBody ProductRequest request) {
-        // Validation
-        if (request.getTitle() == null || request.getTitle().trim().isEmpty()) {
-            throw new RuntimeException("Le nom du produit est requis");
-        }
-        if (request.getPrice() == null || request.getPrice() <= 0) {
-            throw new RuntimeException("Le prix doit être supérieur à 0");
-        }
-        if (request.getQuantityAvailable() == null || request.getQuantityAvailable() < 0) {
-            throw new RuntimeException("La quantité doit être supérieure ou égale à 0");
-        }
-
+    public ResponseEntity<Product> addProduct(@Valid @RequestBody ProductRequest request) {
         // Récupérer le vendeur
         Utilisateur vendor = utilisateurRepository.findById(DEMO_VENDOR_ID)
-                .orElseThrow(() -> new RuntimeException("Vendeur introuvable"));
+                .orElseThrow(() -> new ResourceNotFoundException("Vendeur introuvable"));
 
         // Récupérer la catégorie si fournie
         Categorie categorie = null;
         if (request.getCategorieId() != null) {
             categorie = categorieRepository.findById(request.getCategorieId())
-                    .orElseThrow(() -> new RuntimeException("Catégorie introuvable"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Catégorie introuvable"));
         }
 
         // Créer le produit
@@ -98,18 +93,15 @@ public class VendorController {
         return ResponseEntity.status(HttpStatus.CREATED).body(product);
     }
 
-    /**
-     * Modifier un produit existant
-     * PUT /api/vendeur/produits/{id}
-     */
+    @Operation(summary = "Update an existing product", description = "Update product details")
     @PutMapping("/produits/{id}")
-    public ResponseEntity<Product> updateProduct(@PathVariable Long id, @RequestBody ProductRequest request) {
+    public ResponseEntity<Product> updateProduct(@PathVariable Long id, @Valid @RequestBody ProductRequest request) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Produit introuvable"));
+                .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable"));
 
         // Vérifier que le produit appartient au vendeur
         if (!product.getUtilisateur().getId().equals(DEMO_VENDOR_ID)) {
-            throw new RuntimeException("Vous n'êtes pas autorisé à modifier ce produit");
+            throw new UnauthorizedException("Vous n'êtes pas autorisé à modifier ce produit");
         }
 
         // Mettre à jour les champs
@@ -120,20 +112,14 @@ public class VendorController {
             product.setDescription(request.getDescription());
         }
         if (request.getPrice() != null) {
-            if (request.getPrice() <= 0) {
-                throw new RuntimeException("Le prix doit être supérieur à 0");
-            }
             product.setPrice(request.getPrice());
         }
         if (request.getQuantityAvailable() != null) {
-            if (request.getQuantityAvailable() < 0) {
-                throw new RuntimeException("La quantité ne peut pas être négative");
-            }
             product.setQuantityAvailable(request.getQuantityAvailable());
         }
         if (request.getCategorieId() != null) {
             Categorie categorie = categorieRepository.findById(request.getCategorieId())
-                    .orElseThrow(() -> new RuntimeException("Catégorie introuvable"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Catégorie introuvable"));
             product.setCategorie(categorie);
         }
 
@@ -141,18 +127,15 @@ public class VendorController {
         return ResponseEntity.ok(product);
     }
 
-    /**
-     * Supprimer un produit
-     * DELETE /api/vendeur/produits/{id}
-     */
+    @Operation(summary = "Delete a product", description = "Remove a product from the catalog")
     @DeleteMapping("/produits/{id}")
     public ResponseEntity<Map<String, String>> deleteProduct(@PathVariable Long id) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Produit introuvable"));
+                .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable"));
 
         // Vérifier que le produit appartient au vendeur
         if (!product.getUtilisateur().getId().equals(DEMO_VENDOR_ID)) {
-            throw new RuntimeException("Vous n'êtes pas autorisé à supprimer ce produit");
+            throw new UnauthorizedException("Vous n'êtes pas autorisé à supprimer ce produit");
         }
 
         productRepository.delete(product);
@@ -162,28 +145,22 @@ public class VendorController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Lister tous les produits du vendeur
-     * GET /api/vendeur/produits
-     */
+    @Operation(summary = "Get all vendor products", description = "List all products belonging to the vendor")
     @GetMapping("/produits")
     public ResponseEntity<List<Product>> getVendorProducts() {
         List<Product> products = productRepository.findByUtilisateur_Id(DEMO_VENDOR_ID);
         return ResponseEntity.ok(products);
     }
 
-    /**
-     * Consulter les détails d'un produit
-     * GET /api/vendeur/produits/{id}
-     */
+    @Operation(summary = "Get product details", description = "Get detailed information about a specific product")
     @GetMapping("/produits/{id}")
     public ResponseEntity<Product> getProductDetails(@PathVariable Long id) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Produit introuvable"));
+                .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable"));
 
         // Vérifier que le produit appartient au vendeur
         if (!product.getUtilisateur().getId().equals(DEMO_VENDOR_ID)) {
-            throw new RuntimeException("Vous n'êtes pas autorisé à consulter ce produit");
+            throw new UnauthorizedException("Vous n'êtes pas autorisé à consulter ce produit");
         }
 
         return ResponseEntity.ok(product);
@@ -191,21 +168,22 @@ public class VendorController {
 
     // ========== GESTION DES IMAGES ==========
 
-    /**
-     * Ajouter des images à un produit
-     * POST /api/vendeur/produits/{productId}/images
-     */
+    @Operation(summary = "Add images to product", description = "Add one or more images to a product")
     @PostMapping("/produits/{productId}/images")
     public ResponseEntity<List<ProductImage>> addProductImages(
             @PathVariable Long productId,
             @RequestBody List<String> imageUrls) {
 
+        if (imageUrls == null || imageUrls.isEmpty()) {
+            throw new ValidationException("Au moins une URL d'image est requise");
+        }
+
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Produit introuvable"));
+                .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable"));
 
         // Vérifier que le produit appartient au vendeur
         if (!product.getUtilisateur().getId().equals(DEMO_VENDOR_ID)) {
-            throw new RuntimeException("Vous n'êtes pas autorisé à modifier ce produit");
+            throw new UnauthorizedException("Vous n'êtes pas autorisé à modifier ce produit");
         }
 
         // Récupérer les images existantes pour déterminer l'ordre
@@ -227,28 +205,25 @@ public class VendorController {
         return ResponseEntity.status(HttpStatus.CREATED).body(allImages);
     }
 
-    /**
-     * Supprimer une image d'un produit
-     * DELETE /api/vendeur/produits/{productId}/images/{imageId}
-     */
+    @Operation(summary = "Delete product image", description = "Remove an image from a product")
     @DeleteMapping("/produits/{productId}/images/{imageId}")
     public ResponseEntity<Map<String, String>> deleteProductImage(
             @PathVariable Long productId,
             @PathVariable Long imageId) {
 
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Produit introuvable"));
+                .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable"));
 
         // Vérifier que le produit appartient au vendeur
         if (!product.getUtilisateur().getId().equals(DEMO_VENDOR_ID)) {
-            throw new RuntimeException("Vous n'êtes pas autorisé à modifier ce produit");
+            throw new UnauthorizedException("Vous n'êtes pas autorisé à modifier ce produit");
         }
 
         ProductImage image = productImageRepository.findById(imageId)
-                .orElseThrow(() -> new RuntimeException("Image introuvable"));
+                .orElseThrow(() -> new ResourceNotFoundException("Image introuvable"));
 
         if (!image.getProduct().getId().equals(productId)) {
-            throw new RuntimeException("Cette image n'appartient pas à ce produit");
+            throw new ValidationException("Cette image n'appartient pas à ce produit");
         }
 
         productImageRepository.delete(image);
@@ -258,18 +233,15 @@ public class VendorController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Consulter les images d'un produit
-     * GET /api/vendeur/produits/{productId}/images
-     */
+    @Operation(summary = "Get product images", description = "Retrieve all images for a product")
     @GetMapping("/produits/{productId}/images")
     public ResponseEntity<List<ProductImage>> getProductImages(@PathVariable Long productId) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Produit introuvable"));
+                .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable"));
 
         // Vérifier que le produit appartient au vendeur
         if (!product.getUtilisateur().getId().equals(DEMO_VENDOR_ID)) {
-            throw new RuntimeException("Vous n'êtes pas autorisé à consulter ce produit");
+            throw new UnauthorizedException("Vous n'êtes pas autorisé à consulter ce produit");
         }
 
         List<ProductImage> images = productImageRepository.findByProduct_IdOrderByDisplayOrderAsc(productId);
@@ -278,36 +250,30 @@ public class VendorController {
 
     // ========== AVIS CLIENTS ==========
 
-    /**
-     * Consulter les avis d'un produit
-     * GET /api/vendeur/produits/{productId}/reviews
-     */
+    @Operation(summary = "Get product reviews", description = "View all reviews for a vendor's product")
     @GetMapping("/produits/{productId}/reviews")
     public ResponseEntity<List<Rating>> getProductReviews(@PathVariable Long productId) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Produit introuvable"));
+                .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable"));
 
         // Vérifier que le produit appartient au vendeur
         if (!product.getUtilisateur().getId().equals(DEMO_VENDOR_ID)) {
-            throw new RuntimeException("Vous n'êtes pas autorisé à consulter les avis de ce produit");
+            throw new UnauthorizedException("Vous n'êtes pas autorisé à consulter les avis de ce produit");
         }
 
         List<Rating> reviews = ratingRepository.findByProduct(product);
         return ResponseEntity.ok(reviews);
     }
 
-    /**
-     * Consulter les statistiques des avis d'un produit
-     * GET /api/vendeur/produits/{productId}/stats
-     */
+    @Operation(summary = "Get product statistics", description = "Get detailed statistics and ratings breakdown for a product")
     @GetMapping("/produits/{productId}/stats")
     public ResponseEntity<ProductStatsResponse> getProductStats(@PathVariable Long productId) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Produit introuvable"));
+                .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable"));
 
         // Vérifier que le produit appartient au vendeur
         if (!product.getUtilisateur().getId().equals(DEMO_VENDOR_ID)) {
-            throw new RuntimeException("Vous n'êtes pas autorisé à consulter les statistiques de ce produit");
+            throw new UnauthorizedException("Vous n'êtes pas autorisé à consulter les statistiques de ce produit");
         }
 
         List<Rating> reviews = ratingRepository.findByProduct(product);
