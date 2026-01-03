@@ -4,6 +4,7 @@ import com.myfullstackproject.springbootproject1.dto.ProductRequest;
 import com.myfullstackproject.springbootproject1.dto.ProductStatsResponse;
 import com.myfullstackproject.springbootproject1.model.*;
 import com.myfullstackproject.springbootproject1.repository.*;
+import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -43,6 +44,7 @@ public class VendorController {
      * Ajouter un nouveau produit
      * POST /api/vendeur/produits
      */
+    @Transactional
     @PostMapping("/produits")
     public ResponseEntity<Product> addProduct(@RequestBody ProductRequest request) {
         // Validation
