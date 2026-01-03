@@ -4,6 +4,7 @@ import com.myfullstackproject.springbootproject1.dto.ProductRequest;
 import com.myfullstackproject.springbootproject1.dto.ProductStatsResponse;
 import com.myfullstackproject.springbootproject1.model.*;
 import com.myfullstackproject.springbootproject1.repository.*;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +24,7 @@ public class VendorController {
     private final CategorieRepository categorieRepository;
     private final UtilisateurRepository utilisateurRepository;
     private final RatingRepository ratingRepository;
+    private final EntityManager entityManager;
 
     private static final Long DEMO_VENDOR_ID = 1L; // ID du vendeur démo
 
@@ -30,12 +32,14 @@ public class VendorController {
                            ProductImageRepository productImageRepository,
                            CategorieRepository categorieRepository,
                            UtilisateurRepository utilisateurRepository,
-                           RatingRepository ratingRepository) {
+                           RatingRepository ratingRepository,
+                           EntityManager entityManager) {
         this.productRepository = productRepository;
         this.productImageRepository = productImageRepository;
         this.categorieRepository = categorieRepository;
         this.utilisateurRepository = utilisateurRepository;
         this.ratingRepository = ratingRepository;
+        this.entityManager = entityManager;
     }
 
     // ========== GESTION DES PRODUITS ==========
@@ -95,6 +99,10 @@ public class VendorController {
                         .build();
                 productImageRepository.save(image);
             }
+            // Flush to ensure images are persisted before reloading
+            entityManager.flush();
+            // Clear to force a fresh load from database
+            entityManager.clear();
             // Reload product with images eagerly fetched
             product = productRepository.findByIdWithImages(product.getId())
                     .orElse(product);
