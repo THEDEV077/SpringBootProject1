@@ -27,6 +27,6 @@ public class CategorieController {
     @GetMapping("/{id}")
     public Categorie getCategoryById(@PathVariable Long id) {
         return categorieRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Catégorie introuvable"));
+                .orElseThrow(() -> new RuntimeException("Category not found"));
     }
 }

@@ -33,7 +33,10 @@ public class ProductController {
     // 3) Recherche par mot-clé (search)
     @GetMapping("/search")
     public List<Product> searchProducts(@RequestParam String keyword) {
-        return productRepository.findByTitleContainingIgnoreCase(keyword);
+        if (keyword == null || keyword.trim().isEmpty()) {
+            throw new RuntimeException("Le mot-clé de recherche ne peut pas être vide");
+        }
+        return productRepository.findByTitleContainingIgnoreCase(keyword.trim());
     }
 
     // 4) Filtrage avancé avec plusieurs critères
@@ -65,12 +68,21 @@ public class ProductController {
     public List<Product> getProductsByPriceRange(
             @RequestParam Double minPrice,
             @RequestParam Double maxPrice) {
+        if (minPrice < 0 || maxPrice < 0) {
+            throw new RuntimeException("Les prix ne peuvent pas être négatifs");
+        }
+        if (minPrice > maxPrice) {
+            throw new RuntimeException("Le prix minimum ne peut pas être supérieur au prix maximum");
+        }
         return productRepository.findByPriceBetween(minPrice, maxPrice);
     }
 
     // 8) Recherche par note minimale
     @GetMapping("/rating/{minRating}")
     public List<Product> getProductsByRating(@PathVariable Double minRating) {
+        if (minRating < 0.0 || minRating > 5.0) {
+            throw new RuntimeException("La note doit être entre 0.0 et 5.0");
+        }
         return productRepository.findByRatingGreaterThanEqual(minRating);
     }
 }
