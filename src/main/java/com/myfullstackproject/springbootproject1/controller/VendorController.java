@@ -93,9 +93,13 @@ public class VendorController {
                         .build();
                 productImageRepository.save(image);
             }
-            // Reload product to get the images collection populated
+            // Reload product and manually fetch images to populate the collection
             product = productRepository.findById(product.getId())
                     .orElse(product);
+            // Trigger lazy loading by accessing the collection
+            if (product.getImages() != null) {
+                product.getImages().size(); // This forces Hibernate to load the collection
+            }
         }
 
         return ResponseEntity.status(HttpStatus.CREATED).body(product);
