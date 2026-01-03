@@ -93,6 +93,9 @@ public class VendorController {
                         .build();
                 productImageRepository.save(image);
             }
+            // Reload product to get the images collection populated
+            product = productRepository.findById(product.getId())
+                    .orElse(product);
         }
 
         return ResponseEntity.status(HttpStatus.CREATED).body(product);

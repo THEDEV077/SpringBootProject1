@@ -60,7 +60,7 @@ public class Product {
     @Column(name = "quantite_disponible")
     private Integer quantityAvailable;
 
-    @JsonIgnore
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnoreProperties({"product"})
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<ProductImage> images;
 }
