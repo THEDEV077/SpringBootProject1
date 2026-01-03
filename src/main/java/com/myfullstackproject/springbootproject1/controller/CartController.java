@@ -1,17 +1,23 @@
 package com.myfullstackproject.springbootproject1.controller;
 
+import com.myfullstackproject.springbootproject1.exception.ResourceNotFoundException;
+import com.myfullstackproject.springbootproject1.exception.UnauthorizedException;
+import com.myfullstackproject.springbootproject1.exception.ValidationException;
 import com.myfullstackproject.springbootproject1.model.CartItem;
 import com.myfullstackproject.springbootproject1.model.Product;
 import com.myfullstackproject.springbootproject1.model.Utilisateur;
 import com.myfullstackproject.springbootproject1.repository.CartItemRepository;
 import com.myfullstackproject.springbootproject1.repository.ProductRepository;
 import com.myfullstackproject.springbootproject1.repository.UtilisateurRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/panier")
 @CrossOrigin(origins = "http://localhost:5173")
+@Tag(name = "Shopping Cart", description = "APIs for managing shopping cart")
 public class CartController {
 
     private final CartItemRepository cartItemRepository;
@@ -28,15 +34,19 @@ public class CartController {
         this.utilisateurRepository = utilisateurRepository;
     }
 
-    // 1. AJOUTER produit au panier
+    @Operation(summary = "Add product to cart", description = "Add a product to the user's shopping cart")
     @PostMapping("/add/{productId}")
     public CartItem addToCart(@PathVariable Long productId,
                               @RequestParam(defaultValue = "1") int quantity) {
+        if (quantity <= 0) {
+            throw new ValidationException("La quantité doit être supérieure à 0");
+        }
+
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Produit introuvable"));
+                .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable"));
 
         Utilisateur user = utilisateurRepository.findById(DEMO_USER_ID)
-                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+                .orElseThrow(() -> new ResourceNotFoundException("Utilisateur introuvable"));
 
         // Chercher si produit existe déjà
         List<CartItem> itemsUser = cartItemRepository.findByUtilisateur_Id(DEMO_USER_ID);
@@ -58,36 +68,40 @@ public class CartController {
         return cartItemRepository.save(item);
     }
 
-    // 2. LISTER panier
+    @Operation(summary = "Get cart items", description = "Retrieve all items in the user's shopping cart")
     @GetMapping
     public List<CartItem> getCart() {
         return cartItemRepository.findByUtilisateur_Id(DEMO_USER_ID);
     }
 
-    // 3. MODIFIER quantité
+    @Operation(summary = "Update cart item quantity", description = "Update the quantity of an item in the cart")
     @PutMapping("/{cartItemId}")
     public CartItem updateCartItemQuantity(@PathVariable Long cartItemId,
                                            @RequestParam int quantity) {
+        if (quantity <= 0) {
+            throw new ValidationException("La quantité doit être supérieure à 0");
+        }
+
         CartItem item = cartItemRepository.findById(cartItemId)
-                .orElseThrow(() -> new RuntimeException("Item panier introuvable"));
+                .orElseThrow(() -> new ResourceNotFoundException("Item panier introuvable"));
 
         // Vérifier propriétaire
         if (!item.getUtilisateur().getId().equals(DEMO_USER_ID)) {
-            throw new RuntimeException("Accès non autorisé");
+            throw new UnauthorizedException("Accès non autorisé");
         }
 
         item.setQuantity(quantity);
         return cartItemRepository.save(item);
     }
 
-    // 4. SUPPRIMER item
+    @Operation(summary = "Remove item from cart", description = "Remove an item from the shopping cart")
     @DeleteMapping("/{cartItemId}")
     public void deleteCartItem(@PathVariable Long cartItemId) {
         CartItem item = cartItemRepository.findById(cartItemId)
-                .orElseThrow(() -> new RuntimeException("Item panier introuvable"));
+                .orElseThrow(() -> new ResourceNotFoundException("Item panier introuvable"));
 
         if (!item.getUtilisateur().getId().equals(DEMO_USER_ID)) {
-            throw new RuntimeException("Accès non autorisé");
+            throw new UnauthorizedException("Accès non autorisé");
         }
 
         cartItemRepository.delete(item);
