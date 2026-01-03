@@ -27,6 +27,8 @@ public class RatingController {
     private final RatingRepository ratingRepository;
     private final UtilisateurRepository utilisateurRepository;
 
+    // TODO: Remove hardcoded demo user ID and implement proper authentication
+    // This is temporary for testing without authentication
     private static final Long DEMO_USER_ID = 1L; // Utilisateur test ID=1
 
     public RatingController(ProductRepository productRepository,

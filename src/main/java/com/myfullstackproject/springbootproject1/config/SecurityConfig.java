@@ -21,7 +21,9 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable()) // Disable CSRF for API
+            // CSRF is disabled for stateless REST API - clients are expected to use proper authentication tokens
+            // For stateful sessions, CSRF protection should be enabled
+            .csrf(csrf -> csrf.disable())
             .cors(cors -> {}) // Use CORS configuration from CorsConfig
             .authorizeHttpRequests(auth -> auth
                 .anyRequest().permitAll() // Allow all requests for now - TODO: Implement proper authentication

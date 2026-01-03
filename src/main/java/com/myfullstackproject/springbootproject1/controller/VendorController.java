@@ -30,6 +30,8 @@ public class VendorController {
     private final UtilisateurRepository utilisateurRepository;
     private final RatingRepository ratingRepository;
 
+    // TODO: Remove hardcoded demo vendor ID and implement proper authentication
+    // This is temporary for testing without authentication
     private static final Long DEMO_VENDOR_ID = 1L; // ID du vendeur démo
 
     public VendorController(ProductRepository productRepository,
