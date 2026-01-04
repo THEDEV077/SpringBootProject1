@@ -17,7 +17,7 @@ public class ProductImage {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @JsonIgnoreProperties({"images", "categorie", "utilisateur"})
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "images", "categorie", "utilisateur"})
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "produit_id", nullable = false)
     private Product product;

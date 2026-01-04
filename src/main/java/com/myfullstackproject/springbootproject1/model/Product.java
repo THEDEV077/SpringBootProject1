@@ -1,7 +1,12 @@
 package com.myfullstackproject.springbootproject1.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "produits")
@@ -22,10 +27,12 @@ public class Product {
     @Column(name = "titre")
     private String title;
 //
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "utilisateur_id")
     private Utilisateur utilisateur;
 
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "produits"})
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "categorie_id")
     private Categorie categorie;
@@ -53,4 +60,9 @@ public class Product {
 
     @Column(name = "quantite_disponible")
     private Integer quantityAvailable;
+
+    @JsonIgnoreProperties({"product"})
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<ProductImage> images = new ArrayList<>();
 }

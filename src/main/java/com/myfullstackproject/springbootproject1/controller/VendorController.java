@@ -4,6 +4,8 @@ import com.myfullstackproject.springbootproject1.dto.ProductRequest;
 import com.myfullstackproject.springbootproject1.dto.ProductStatsResponse;
 import com.myfullstackproject.springbootproject1.model.*;
 import com.myfullstackproject.springbootproject1.repository.*;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +24,9 @@ public class VendorController {
     private final CategorieRepository categorieRepository;
     private final UtilisateurRepository utilisateurRepository;
     private final RatingRepository ratingRepository;
+    private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
+    private final EntityManager entityManager;
 
     private static final Long DEMO_VENDOR_ID = 1L; // ID du vendeur démo
 
@@ -29,12 +34,18 @@ public class VendorController {
                            ProductImageRepository productImageRepository,
                            CategorieRepository categorieRepository,
                            UtilisateurRepository utilisateurRepository,
-                           RatingRepository ratingRepository) {
+                           RatingRepository ratingRepository,
+                           OrderRepository orderRepository,
+                           OrderItemRepository orderItemRepository,
+                           EntityManager entityManager) {
         this.productRepository = productRepository;
         this.productImageRepository = productImageRepository;
         this.categorieRepository = categorieRepository;
         this.utilisateurRepository = utilisateurRepository;
         this.ratingRepository = ratingRepository;
+        this.orderRepository = orderRepository;
+        this.orderItemRepository = orderItemRepository;
+        this.entityManager = entityManager;
     }
 
     // ========== GESTION DES PRODUITS ==========
@@ -43,6 +54,7 @@ public class VendorController {
      * Ajouter un nouveau produit
      * POST /api/vendeur/produits
      */
+    @Transactional
     @PostMapping("/produits")
     public ResponseEntity<Product> addProduct(@RequestBody ProductRequest request) {
         // Validation
@@ -93,6 +105,13 @@ public class VendorController {
                         .build();
                 productImageRepository.save(image);
             }
+            // Flush to ensure images are persisted before reloading
+            entityManager.flush();
+            // Clear to force a fresh load from database
+            entityManager.clear();
+            // Reload product with images eagerly fetched
+            product = productRepository.findByIdWithImages(product.getId())
+                    .orElse(product);
         }
 
         return ResponseEntity.status(HttpStatus.CREATED).body(product);
@@ -338,6 +357,144 @@ public class VendorController {
                 .build();
 
         return ResponseEntity.ok(stats);
+    }
+
+    // ========== GESTION DES VENTES ==========
+
+    /**
+     * Récupérer toutes les ventes du vendeur
+     * GET /api/vendeur/ventes
+     */
+    @GetMapping("/ventes")
+    public ResponseEntity<List<Map<String, Object>>> getVendorSales() {
+        // Récupérer tous les produits du vendeur
+        List<Product> vendorProducts = productRepository.findByUtilisateur_Id(DEMO_VENDOR_ID);
+        
+        if (vendorProducts.isEmpty()) {
+            return ResponseEntity.ok(List.of());
+        }
+
+        // Récupérer toutes les commandes contenant les produits du vendeur
+        List<OrderItem> vendorOrderItems = orderItemRepository.findByProduct_Utilisateur_Id(DEMO_VENDOR_ID);
+
+        // Créer une liste de ventes avec les détails
+        List<Map<String, Object>> sales = vendorOrderItems.stream()
+                .map(orderItem -> {
+                    Map<String, Object> sale = new HashMap<>();
+                    sale.put("id", orderItem.getId());
+                    sale.put("orderId", orderItem.getOrder().getId());
+                    sale.put("productName", orderItem.getProduct().getTitle());
+                    sale.put("productId", orderItem.getProduct().getId());
+                    sale.put("quantity", orderItem.getQuantity());
+                    sale.put("unitPrice", orderItem.getUnitPrice());
+                    sale.put("totalPrice", orderItem.getQuantity() * orderItem.getUnitPrice());
+                    sale.put("orderDate", orderItem.getOrder().getCreatedAt());
+                    sale.put("buyerName", orderItem.getOrder().getUtilisateur().getNom());
+                    return sale;
+                })
+                .toList();
+
+        return ResponseEntity.ok(sales);
+    }
+
+    /**
+     * Récupérer les statistiques de ventes du vendeur
+     * GET /api/vendeur/ventes/stats
+     */
+    @GetMapping("/ventes/stats")
+    public ResponseEntity<Map<String, Object>> getVendorSalesStats() {
+        // Récupérer tous les items de commande pour les produits du vendeur
+        List<OrderItem> vendorOrderItems = orderItemRepository.findByProduct_Utilisateur_Id(DEMO_VENDOR_ID);
+
+        // Calculer les statistiques
+        int totalOrders = (int) vendorOrderItems.stream()
+                .map(item -> item.getOrder().getId())
+                .distinct()
+                .count();
+
+        int totalProductsSold = vendorOrderItems.stream()
+                .mapToInt(OrderItem::getQuantity)
+                .sum();
+
+        double totalRevenue = vendorOrderItems.stream()
+                .mapToDouble(item -> item.getQuantity() * item.getUnitPrice())
+                .sum();
+
+        double averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0.0;
+
+        // Top 5 produits les plus vendus
+        Map<Long, Integer> productSales = new HashMap<>();
+        Map<Long, String> productNames = new HashMap<>();
+        for (OrderItem item : vendorOrderItems) {
+            Long productId = item.getProduct().getId();
+            productSales.put(productId, productSales.getOrDefault(productId, 0) + item.getQuantity());
+            productNames.put(productId, item.getProduct().getTitle());
+        }
+
+        List<Map<String, Object>> topProducts = productSales.entrySet().stream()
+                .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue()))
+                .limit(5)
+                .map(entry -> {
+                    Map<String, Object> product = new HashMap<>();
+                    product.put("productId", entry.getKey());
+                    product.put("productName", productNames.get(entry.getKey()));
+                    product.put("quantitySold", entry.getValue());
+                    return product;
+                })
+                .toList();
+
+        // Créer la réponse
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("totalOrders", totalOrders);
+        stats.put("totalProductsSold", totalProductsSold);
+        stats.put("totalRevenue", totalRevenue);
+        stats.put("averageOrderValue", averageOrderValue);
+        stats.put("topProducts", topProducts);
+
+        return ResponseEntity.ok(stats);
+    }
+
+    /**
+     * Récupérer les détails d'une vente spécifique
+     * GET /api/vendeur/ventes/{orderId}
+     */
+    @GetMapping("/ventes/{orderId}")
+    public ResponseEntity<Map<String, Object>> getVendorSaleDetails(@PathVariable Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Commande introuvable"));
+
+        // Récupérer uniquement les items du vendeur dans cette commande
+        List<OrderItem> vendorItems = order.getItems().stream()
+                .filter(item -> item.getProduct().getUtilisateur().getId().equals(DEMO_VENDOR_ID))
+                .toList();
+
+        if (vendorItems.isEmpty()) {
+            throw new RuntimeException("Aucun produit de ce vendeur dans cette commande");
+        }
+
+        // Calculer le total pour le vendeur
+        double vendorTotal = vendorItems.stream()
+                .mapToDouble(item -> item.getQuantity() * item.getUnitPrice())
+                .sum();
+
+        // Créer la réponse
+        Map<String, Object> saleDetails = new HashMap<>();
+        saleDetails.put("orderId", order.getId());
+        saleDetails.put("orderDate", order.getCreatedAt());
+        saleDetails.put("buyerName", order.getUtilisateur().getNom());
+        saleDetails.put("vendorTotal", vendorTotal);
+        saleDetails.put("items", vendorItems.stream()
+                .map(item -> {
+                    Map<String, Object> itemMap = new HashMap<>();
+                    itemMap.put("productName", item.getProduct().getTitle());
+                    itemMap.put("quantity", item.getQuantity());
+                    itemMap.put("unitPrice", item.getUnitPrice());
+                    itemMap.put("totalPrice", item.getQuantity() * item.getUnitPrice());
+                    return itemMap;
+                })
+                .toList());
+
+        return ResponseEntity.ok(saleDetails);
     }
 
     // Méthode utilitaire pour générer un code ASIN unique

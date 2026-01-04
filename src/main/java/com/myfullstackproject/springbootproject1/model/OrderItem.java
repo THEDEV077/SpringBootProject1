@@ -1,5 +1,6 @@
 package com.myfullstackproject.springbootproject1.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -16,10 +17,12 @@ public class OrderItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "items"})
     @ManyToOne
     @JoinColumn(name = "commande_id")
     private Order order;
 
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "categorie", "utilisateur", "images"})
     @ManyToOne
     @JoinColumn(name = "produit_id")
     private com.myfullstackproject.springbootproject1.model.Product product;
